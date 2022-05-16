@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-import sys
 from subprocess import Popen
 from subprocess import PIPE
-import re
-import random
 import os
 
 gbi = 0
@@ -49,26 +46,39 @@ def gen_box_constraints(vars, clauses, row, column):
                 )
 
 
-def gen_starting_sudoku_contraints(vars, clauses, sudoku_file_name, print_sudoku=False):
+def gen_starting_sudoku_contraints(vars, clauses, sudoku):
+    for i in range(9):
+        for j in range(9):
+            if 1 <= sudoku[i][j] <= 9:
+                clauses.append([vars[varName(i+1, j+1, sudoku[i][j])]])
+
+
+def read_sudoku(sudoku_file_name, print_sudoku=False):
+    sudoku = []
     with open(sudoku_file_name, "r") as f:
         lines = f.readlines()
         assert len(lines) == 9
         for i in range(9):
             cells = lines[i].split(', ')
             assert len(cells) == 9
+            row = []
             for j in range(9):
                 if print_sudoku:
                     print(cells[j].strip(), end='  ')
                 if cells[j].strip() == '_':
+                    row.append(-1)
                     continue
                 v = int(cells[j])
                 assert 1 <= v <= 9
-                clauses.append([vars[varName(i+1, j+1, v)]])
+                row.append(v)
             if print_sudoku:
                 print()
+            sudoku.append(row)
+    return sudoku
 
 
-def gen_constraints(vars, sudoku_file_name):
+# sudoku must have -1 where the cell is empty
+def gen_constraints(vars, sudoku_file_name='', sudoku=None):
     clauses = []
     # Each number cannot stay in the same row
     for n in range(1, 10):
@@ -104,7 +114,9 @@ def gen_constraints(vars, sudoku_file_name):
             clauses.append(clause)
 
     # The starting configuration is used to set constraints
-    gen_starting_sudoku_contraints(vars, clauses, sudoku_file_name, print_sudoku=True)
+    if sudoku is None:
+        sudoku = read_sudoku(sudoku_file_name, print_sudoku=True)
+    gen_starting_sudoku_contraints(vars, clauses, sudoku)
     return clauses
 
 # A helper function to print the cnf header
@@ -127,12 +139,13 @@ def printSolution(sol):
         print()
 
 
-if __name__ == '__main__':
-    # This is for reading in the arguments.
-
+def solve(sudoku=None):
     variables = gen_vars()
 
-    rules = gen_constraints(variables, './sudoku.txt')
+    if sudoku is None:
+        rules = gen_constraints(variables, sudoku_file_name='./sudoku.txt')
+    else:
+        rules = gen_constraints(variables, sudoku=sudoku)
 
     head = printHeader(len(rules))
     rls = printCnf(rules)
@@ -148,6 +161,11 @@ if __name__ == '__main__':
     res = ms_out.decode('utf-8')
     # Print output
     res = res.strip().split('\n')
+
+    # delete tmp_prob.cnf
+    os.remove("tmp_prob.cnf")
+
+    sudoku_solution = None
 
     # if it was satisfiable, we want to have the assignment printed out
     if res[0] == "s SATISFIABLE":
@@ -165,7 +183,13 @@ if __name__ == '__main__':
         # Print the solution
         for f in facts:
             r, c, n = rowColNum(f)
-            sudoku_solution[r-1][c-1] = n
-        printSolution(sudoku_solution)
+            sudoku_solution[r - 1][c - 1] = n
     else:
         print("sudoku not solvable")
+    return sudoku_solution
+
+
+if __name__ == '__main__':
+    # This is for reading in the arguments.
+    solution = solve()
+    printSolution(solution)
