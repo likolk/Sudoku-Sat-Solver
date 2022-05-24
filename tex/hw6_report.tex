@@ -46,8 +46,6 @@
 
    \bigskip
 
-
-
   \bigskip \bigskip
 
 
@@ -82,7 +80,7 @@ Upon creating the mapping, we encoded the constraints into clauses as follows: t
 
 For the second condition, saying that each number must appear only once in each row is equivalent to saying that a same number cannot stay in the same row. This means that for each pair of cells of the row, the n-th number cannot be in both cells. Given the number 1 and the first two cells of the first row, this clause can be written as:
 \begin{align*}
-  \neg (inCell(1,1,1) , inCell(1,2,1))
+  \neg (inCell(1,1,1) \wedge inCell(1,2,1))
 \end{align*}
 which can be written as:
 \begin{align*}
